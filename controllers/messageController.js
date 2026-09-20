@@ -32,15 +32,15 @@ const isUserMuted = (conversation, userId) => {
 
 const populateMessage = async (message) => {
   return await message.populate([
-    { path: "sender", select: "username avatar" },
+    { path: "sender", select: "username avatar isDeleted" },
     {
       path: "replyTo",
       select: "content type mediaUrl sender isDeleted",
-      populate: { path: "sender", select: "username avatar" },
+      populate: { path: "sender", select: "username avatar isDeleted" },
     },
-    { path: "reactions.user", select: "username avatar" },
-    { path: "systemMessage.actor", select: "username avatar" },
-    { path: "systemMessage.target", select: "username avatar" },
+    { path: "reactions.user", select: "username avatar isDeleted" },
+    { path: "systemMessage.actor", select: "username avatar isDeleted" },
+    { path: "systemMessage.target", select: "username avatar isDeleted" },
   ]);
 };
 
@@ -411,15 +411,15 @@ export const getMessages = asyncHandler(async (req, res) => {
   }
 
   const messages = await Message.find(query)
-    .populate("sender", "username avatar")
+    .populate("sender", "username avatar isDeleted")
     .populate({
       path: "replyTo",
       select: "content type mediaUrl sender isDeleted",
-      populate: { path: "sender", select: "username avatar" },
+      populate: { path: "sender", select: "username avatar isDeleted" },
     })
-    .populate("reactions.user", "username avatar")
-    .populate("systemMessage.actor", "username avatar")
-    .populate("systemMessage.target", "username avatar")
+    .populate("reactions.user", "username avatar isDeleted")
+    .populate("systemMessage.actor", "username avatar isDeleted")
+    .populate("systemMessage.target", "username avatar isDeleted")
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);

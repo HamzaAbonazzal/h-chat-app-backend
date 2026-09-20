@@ -14,7 +14,8 @@ export const initFirebase = () => {
   if (initialized) return messaging;
 
   try {
-    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+    // const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+    const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (!serviceAccountPath) {
       console.warn(
         "⚠️  FIREBASE_SERVICE_ACCOUNT_PATH not set. Notifications disabled.",

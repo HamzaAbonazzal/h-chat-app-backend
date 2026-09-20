@@ -7,12 +7,16 @@ import {
   getUsersStatus,
   getUserStatus,
   updatePrivacy,
+  deleteAccount,
 } from "../controllers/userController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
 router.use(protect);
+
+// ⭐ حذف الحساب — قبل /:id
+router.delete("/me", deleteAccount);
 
 router.get("/", getUsers);
 

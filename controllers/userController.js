@@ -7,6 +7,8 @@ import {
   buildPresenceResponse,
   buildUserResponse,
 } from "../utils/presenceHelper.js";
+import Conversation from "../models/Conversation.js";
+import Message from "../models/Message.js";
 
 // @route GET /api/users?search=
 export const getUsers = asyncHandler(async (req, res) => {
@@ -163,4 +165,112 @@ export const updatePrivacy = asyncHandler(async (req, res) => {
 
   await user.save();
   res.json({ success: true, data: user.privacy });
+});
+
+// ⭐ @route   DELETE /api/users/me
+// @desc     حذف حساب المستخدم الحالي (soft delete)
+// @access  Private
+export const deleteAccount = asyncHandler(async (req, res) => {
+  const { password, reason } = req.body;
+  const userId = req.user._id;
+
+  // ⭐ 1) التحقق من كلمة المرور
+  if (!password) {
+    throw new ApiError(400, "Password is required to delete account");
+  }
+
+  const user = await User.findById(userId).select("+password");
+  if (!user) throw new ApiError(404, "User not found");
+
+  if (user.isDeleted) {
+    throw new ApiError(400, "Account is already deleted");
+  }
+
+  const isMatch = await user.matchPassword(password);
+  if (!isMatch) {
+    throw new ApiError(401, "Password is incorrect", "INVALID_PASSWORD");
+  }
+
+  // ⭐ 2) تسجيل الخروج من كل الأجهزة
+  const io = req.app.get("io");
+  if (io) {
+    io.to(userId.toString()).emit("accountDeleted", {
+      message: "Your account has been deleted",
+    });
+  }
+
+  // ⭐ 3) مسح البيانات الشخصية
+  user.username = `deleted_${userId.toString().slice(-8)}`;
+  user.email = `deleted_${userId.toString().slice(-8)}@deleted.local`;
+  user.avatar = "";
+  user.bio = "";
+  user.isOnline = false;
+  user.lastSeen = new Date();
+  user.fcmTokens = [];
+  user.refreshToken = undefined;
+
+  // ⭐ 4) تعليم كـ محذوف
+  user.isDeleted = true;
+  user.deletedAt = new Date();
+  // ⭐ الحذف النهائي بعد 30 يوماً
+  user.hardDeleteAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  if (reason) {
+    // يمكن حفظ السبب في log للتحليل
+    console.log(`📝 Account deletion reason from ${userId}: ${reason}`);
+  }
+
+  await user.save({ validateBeforeSave: false });
+
+  // ⭐ 5) حذف كل الحظر (في الاتجاهين)
+  await Block.deleteMany({
+    $or: [{ blocker: userId }, { blocked: userId }],
+  });
+
+  // ⭐ 6) إزالة المستخدم من كل المحادثات
+  await Conversation.updateMany(
+    { participants: userId },
+    {
+      $pull: {
+        participants: userId,
+        admins: userId,
+        pinnedBy: userId,
+        archivedBy: userId,
+        mutedBy: { user: userId },
+        deletedFor: userId,
+      },
+    },
+  );
+
+  // ⭐ 7) التعامل مع المحادثات الفردية الفارغة
+  const oneOnOneConversations = await Conversation.find({
+    isGroup: false,
+    participants: { $size: 0 },
+  });
+
+  for (const conv of oneOnOneConversations) {
+    await Message.deleteMany({ conversation: conv._id });
+    await Conversation.findByIdAndDelete(conv._id);
+  }
+
+  // ⭐ 8) التعامل مع المجموعات الفارغة (حيث كان آخر عضو)
+  const emptyGroups = await Conversation.find({
+    isGroup: true,
+    participants: { $size: 0 },
+  });
+
+  for (const group of emptyGroups) {
+    await Message.deleteMany({ conversation: group._id });
+    await Conversation.findByIdAndDelete(group._id);
+  }
+
+  // ⭐ 9) إعلام جهات الاتصال بحذف الحساب
+  if (io) {
+    io.emit("userDeleted", { userId });
+  }
+
+  res.json({
+    success: true,
+    message: "Account deleted successfully",
+  });
 });

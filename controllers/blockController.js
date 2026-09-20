@@ -65,7 +65,7 @@ export const unblockUser = asyncHandler(async (req, res) => {
 // @route GET /api/blocks
 export const getBlockedUsers = asyncHandler(async (req, res) => {
   const blocks = await Block.find({ blocker: req.user._id })
-    .populate("blocked", "username avatar bio isOnline lastSeen")
+    .populate("blocked", "username avatar bio isOnline lastSeen isDeleted")
     .sort({ createdAt: -1 });
 
   const data = blocks.map((b) => ({

@@ -178,9 +178,9 @@ export const getUserConversations = asyncHandler(async (req, res) => {
     .populate({
       path: "lastMessage",
       populate: [
-        { path: "sender", select: "username avatar" },
-        { path: "systemMessage.actor", select: "username avatar" },
-        { path: "systemMessage.target", select: "username avatar" },
+        { path: "sender", select: "username avatar isDeleted" },
+        { path: "systemMessage.actor", select: "username avatar isDeleted" },
+        { path: "systemMessage.target", select: "username avatar isDeleted" },
       ],
     });
 

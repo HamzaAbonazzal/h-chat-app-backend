@@ -50,7 +50,6 @@ const userSchema = new mongoose.Schema(
       },
       readReceipts: { type: Boolean, default: true },
     },
-    // ⭐ جديد: توكنات FCM للأجهزة
     fcmTokens: [
       {
         token: { type: String, required: true },
@@ -58,6 +57,21 @@ const userSchema = new mongoose.Schema(
         addedAt: { type: Date, default: Date.now },
       },
     ],
+    // ⭐ جديد: حذف الحساب
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    // ⭐ للحذف النهائي بعد 30 يوماً
+    hardDeleteAt: {
+      type: Date,
+      default: null,
+    },
     refreshToken: { type: String, select: false },
   },
   { timestamps: true },
