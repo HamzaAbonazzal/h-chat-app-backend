@@ -10,6 +10,11 @@ const userSchema = new mongoose.Schema(
       trim: true,
       minlength: 3,
       maxlength: 30,
+      // ⭐ يقبل العربية + الإنجليزية + الأرقام + الشرطة السفلية
+      match: [
+        /^[\u0600-\u06FF\u0750-\u077Fa-zA-Z0-9_ ]+$/,
+        "Username can only contain Arabic or English letters, numbers, and underscores",
+      ],
     },
     email: {
       type: String,
@@ -57,21 +62,9 @@ const userSchema = new mongoose.Schema(
         addedAt: { type: Date, default: Date.now },
       },
     ],
-    // ⭐ جديد: حذف الحساب
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-    deletedAt: {
-      type: Date,
-      default: null,
-    },
-    // ⭐ للحذف النهائي بعد 30 يوماً
-    hardDeleteAt: {
-      type: Date,
-      default: null,
-    },
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
+    hardDeleteAt: { type: Date, default: null },
     refreshToken: { type: String, select: false },
   },
   { timestamps: true },

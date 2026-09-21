@@ -13,7 +13,10 @@ import { authLimiter, registerLimiter } from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
-// تسجيل مستخدم (Rate Limit صارم)
+// ⭐ regex يقبل: العربية، الإنجليزية، الأرقام، والشرطة السفلية
+// المدى العربي: \u0600-\u06FF (Arabic), \u0750-\u077F (Arabic Supplement)
+const USERNAME_REGEX = /^[\u0600-\u06FF\u0750-\u077Fa-zA-Z0-9_ ]+$/;
+
 router.post(
   "/register",
   registerLimiter,
@@ -22,9 +25,9 @@ router.post(
       .trim()
       .isLength({ min: 3, max: 30 })
       .withMessage("Username must be 3-30 characters")
-      .matches(/^[a-zA-Z0-9_]+$/)
+      .matches(USERNAME_REGEX)
       .withMessage(
-        "Username can only contain letters, numbers, and underscores",
+        "Username can only contain Arabic or English letters, numbers, and underscores",
       ),
     body("email").isEmail().normalizeEmail().withMessage("Invalid email"),
     body("password")
@@ -35,7 +38,6 @@ router.post(
   register,
 );
 
-// تسجيل دخول (Rate Limit صارم)
 router.post(
   "/login",
   authLimiter,
@@ -47,13 +49,8 @@ router.post(
   login,
 );
 
-// Refresh Token
 router.post("/refresh", refresh);
-
-// Logout
 router.post("/logout", logout);
-
-// البيانات الشخصية
 router.get("/me", protect, getMe);
 
 export default router;
