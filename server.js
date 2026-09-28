@@ -46,11 +46,20 @@ const __dirname = path.dirname(__filename);
 // ============ CORS: قائمة النطاقات المسموحة ============
 
 const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "http://localhost:5173", // Vite
-  process.env.CLIENT_URL,
-].filter(Boolean);
+  ...new Set(
+    (process.env.CLIENT_URL || "")
+      .split(",")
+      .map((o) => o.trim())
+      .filter(Boolean)
+      .concat([
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:3001",
+      ]),
+  ),
+];
+
+logger.info(`🌐 Allowed Origins: ${allowedOrigins.join(", ")}`);
 
 // ============ Start Server ============
 

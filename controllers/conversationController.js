@@ -763,6 +763,7 @@ export const toggleArchiveConversation = asyncHandler(async (req, res) => {
 });
 
 // @route DELETE /api/conversations/:id
+// حذف المحادثة من عند المستخدم فقط
 export const deleteConversation = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const userId = req.user._id;
@@ -775,7 +776,9 @@ export const deleteConversation = asyncHandler(async (req, res) => {
   );
   if (!isMember) throw new ApiError(403, "Not a participant");
 
+  // ⭐ للمجموعات: الحذف = مغادرة فعلية
   if (conversation.isGroup) {
+    // إذا كان Owner، يجب استخدام deleteGroup
     if (conversation.owner?.toString() === userId.toString()) {
       throw new ApiError(403, "As the owner, use delete group instead");
     }
@@ -794,15 +797,38 @@ export const deleteConversation = asyncHandler(async (req, res) => {
     if (io) io.to(id).emit("newMessage", populatedMsg);
   }
 
-  if (
-    !conversation.deletedFor.some((d) => d.toString() === userId.toString())
-  ) {
-    conversation.deletedFor.push(userId);
+  // ⭐ للمحادثات الفردية: أضف إلى deletedFor (حذف من عندي فقط)
+  // ملاحظة: نقبل 1 أو 2 مشارك — لأن الطرف الآخر قد يكون حذف حسابه
+  if (!conversation.isGroup) {
+    // فقط تحقق أن المستخدم ليس وحدَه (يجب أن يكون هناك طرف آخر على الأقل)
+    // أو أن الطرف الآخر حذف حسابه
+
+    // ⭐ إضافة المستخدم إلى deletedFor (بدون تكرار)
+    const alreadyDeleted = conversation.deletedFor.some(
+      (d) => d.toString() === userId.toString(),
+    );
+
+    if (!alreadyDeleted) {
+      conversation.deletedFor.push(userId);
+    }
+  } else {
+    // ⭐ للمجموعات: نضيف أيضاً إلى deletedFor
+    const alreadyDeleted = conversation.deletedFor.some(
+      (d) => d.toString() === userId.toString(),
+    );
+
+    if (!alreadyDeleted) {
+      conversation.deletedFor.push(userId);
+    }
   }
 
   await conversation.save();
 
-  res.json({ success: true, message: "Conversation deleted" });
+  res.json({
+    success: true,
+    message: "Conversation deleted",
+    data: { conversationId: id },
+  });
 });
 
 // ⭐ جديد: @route PUT /api/conversations/:id/disappearing

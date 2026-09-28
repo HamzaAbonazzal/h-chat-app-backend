@@ -21,7 +21,7 @@ export const getUsers = asyncHandler(async (req, res) => {
       }
     : {};
 
-  // استثناء المحظورين
+  // ⭐ استثناء المحظورين
   const blocks = await Block.find({
     $or: [{ blocker: req.user._id }, { blocked: req.user._id }],
   });
@@ -36,9 +36,11 @@ export const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find({
     ...keyword,
     _id: { $nin: Array.from(excludedIds) },
+    // ⭐ جديد: استثناء الحسابات المحذوفة
+    isDeleted: { $ne: true },
   }).select("-password -refreshToken -privacy");
 
-  // جهات الاتصال لمعرفة الخصوصية
+  // ⭐ جهات الاتصال لمعرفة الخصوصية
   const myContacts = await getUserContacts(req.user._id);
   const contactsSet = new Set(myContacts.map((c) => c.toString()));
 
